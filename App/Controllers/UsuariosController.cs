@@ -1,48 +1,47 @@
 using CapaNegocios;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace App.Controllers
 {
-    public class RolesController : Controller
+    public class UsuariosController : Controller
     {
-        private readonly RolServicio _servicio;
-        private readonly PermisoServicio _permisoServicio;
+        private readonly UsuarioServicio _servicio;
+        private readonly RolServicio _rolServicio;
 
-        public RolesController(RolServicio servicio, PermisoServicio permisoServicio)
+        public UsuariosController(UsuarioServicio servicio, RolServicio rolServicio)
         {
             _servicio = servicio;
-            _permisoServicio = permisoServicio;
+            _rolServicio = rolServicio;
         }
 
-        private void CargarPermisosViewBag()
+        private void CargarRolesViewBag()
         {
-            ViewBag.PermisosDisponibles = _permisoServicio.Listar().Where(p => p.Activo).ToList();
+            ViewBag.Roles = new SelectList(_rolServicio.Listar().Where(r => r.Activo), "IdRol", "Nombre");
         }
 
         public IActionResult Index() => View(_servicio.Listar());
 
         public IActionResult Details(int? id)
         {
-            if (id is null)
-                return NotFound();
+            if (id is null) return NotFound();
             var modelo = _servicio.ObtenerPorId(id.Value);
-            CargarPermisosViewBag();
             return modelo is null ? NotFound() : View(modelo);
         }
 
         public IActionResult Create()
         {
-            CargarPermisosViewBag();
-            return View(new RolModelo());
+            CargarRolesViewBag();
+            return View(new UsuarioModelo());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Create(RolModelo modelo)
+        public IActionResult Create(UsuarioModelo modelo)
         {
             if (!ModelState.IsValid)
             {
-                CargarPermisosViewBag();
+                CargarRolesViewBag();
                 return View(modelo);
             }
             _servicio.Crear(modelo);
@@ -51,24 +50,21 @@ namespace App.Controllers
 
         public IActionResult Edit(int? id)
         {
-            if (id is null)
-                return NotFound();
+            if (id is null) return NotFound();
             var modelo = _servicio.ObtenerPorId(id.Value);
             if (modelo is null) return NotFound();
-            
-            CargarPermisosViewBag();
+            CargarRolesViewBag();
             return View(modelo);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Edit(int id, RolModelo modelo)
+        public IActionResult Edit(int id, UsuarioModelo modelo)
         {
-            if (id != modelo.IdRol)
-                return NotFound();
+            if (id != modelo.IdUsuario) return NotFound();
             if (!ModelState.IsValid)
             {
-                CargarPermisosViewBag();
+                CargarRolesViewBag();
                 return View(modelo);
             }
             _servicio.Actualizar(modelo);
@@ -77,8 +73,7 @@ namespace App.Controllers
 
         public IActionResult Delete(int? id)
         {
-            if (id is null)
-                return NotFound();
+            if (id is null) return NotFound();
             var modelo = _servicio.ObtenerPorId(id.Value);
             return modelo is null ? NotFound() : View(modelo);
         }
