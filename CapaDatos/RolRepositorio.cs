@@ -18,16 +18,13 @@ public class RolRepositorio
 
     public List<Rol> Listar()
     {
-        const string sql = """
-            SELECT IdRol, Nombre, Descripcion, FechaCreacion, FechaModificacion, FechaDesactivacion, Activo
-            FROM dbo.Roles
-            ORDER BY Nombre;
-            """;
-
         var lista = new List<Rol>();
         using var cn = ConexionDB.CrearConexion();
         cn.Open();
-        using var cmd = new SqlCommand(sql, cn);
+        using var cmd = new SqlCommand("dbo.usp_Roles_Listar", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
         using var rd = cmd.ExecuteReader();
         while (rd.Read())
             lista.Add(MapearFila(rd));
@@ -36,15 +33,12 @@ public class RolRepositorio
 
     public Rol? ObtenerPorId(int idRol)
     {
-        const string sql = """
-            SELECT IdRol, Nombre, Descripcion, FechaCreacion, FechaModificacion, FechaDesactivacion, Activo
-            FROM dbo.Roles
-            WHERE IdRol = @Id;
-            """;
-
         using var cn = ConexionDB.CrearConexion();
         cn.Open();
-        using var cmd = new SqlCommand(sql, cn);
+        using var cmd = new SqlCommand("dbo.usp_Roles_ObtenerPorId", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
         cmd.Parameters.AddWithValue("@Id", idRol);
         using var rd = cmd.ExecuteReader();
         return rd.Read() ? MapearFila(rd) : null;
@@ -52,60 +46,74 @@ public class RolRepositorio
 
     public int Insertar(Rol r)
     {
-        const string sql = """
-            INSERT INTO dbo.Roles (Nombre, Descripcion, FechaCreacion, FechaModificacion, FechaDesactivacion, Activo)
-            OUTPUT INSERTED.IdRol
-            VALUES (@Nombre, @Descripcion, SYSDATETIME(), NULL, NULL, @Activo);
-            """;
-
         using var cn = ConexionDB.CrearConexion();
         cn.Open();
-        using var cmd = new SqlCommand(sql, cn);
+        using var cmd = new SqlCommand("dbo.usp_Roles_Insertar", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
         cmd.Parameters.AddWithValue("@Nombre", r.Nombre);
         cmd.Parameters.AddWithValue("@Descripcion", r.Descripcion);
         cmd.Parameters.AddWithValue("@Activo", r.Activo);
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
-    public bool Actualizar(Rol r)
+    public int Actualizar(Rol r)
     {
-        const string sql = """
-            UPDATE dbo.Roles
-            SET Nombre = @Nombre,
-                Descripcion = @Descripcion,
-                FechaModificacion = SYSDATETIME(),
-                Activo = @Activo,
-                FechaDesactivacion = CASE
-                    WHEN @Activo = 1 THEN NULL
-                    ELSE ISNULL(FechaDesactivacion, SYSDATETIME())
-                END
-            WHERE IdRol = @IdRol;
-            """;
-
         using var cn = ConexionDB.CrearConexion();
         cn.Open();
-        using var cmd = new SqlCommand(sql, cn);
+        using var cmd = new SqlCommand("dbo.usp_Roles_Actualizar", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
         cmd.Parameters.AddWithValue("@IdRol", r.IdRol);
         cmd.Parameters.AddWithValue("@Nombre", r.Nombre);
         cmd.Parameters.AddWithValue("@Descripcion", r.Descripcion);
         cmd.Parameters.AddWithValue("@Activo", r.Activo);
-        return cmd.ExecuteNonQuery() > 0;
+        cmd.ExecuteNonQuery();
+        return r.IdRol;
     }
 
     public bool Desactivar(int idRol)
     {
-        const string sql = """
-            UPDATE dbo.Roles
-            SET Activo = 0,
-                FechaModificacion = SYSDATETIME(),
-                FechaDesactivacion = SYSDATETIME()
-            WHERE IdRol = @IdRol;
-            """;
-
         using var cn = ConexionDB.CrearConexion();
         cn.Open();
-        using var cmd = new SqlCommand(sql, cn);
+        using var cmd = new SqlCommand("dbo.usp_Roles_Desactivar", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
         cmd.Parameters.AddWithValue("@IdRol", idRol);
         return cmd.ExecuteNonQuery() > 0;
+    }
+
+    public List<int> ObtenerPermisosPorRol(int idRol)
+    {
+        var lista = new List<int>();
+        using var cn = ConexionDB.CrearConexion();
+        cn.Open();
+        using var cmd = new SqlCommand("dbo.usp_RolPermiso_ObtenerPorRol", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
+        cmd.Parameters.AddWithValue("@IdRol", idRol);
+        using var rd = cmd.ExecuteReader();
+        while (rd.Read())
+        {
+            lista.Add(rd.GetInt32(rd.GetOrdinal("IdPermiso")));
+        }
+        return lista;
+    }
+
+    public void GuardarPermisos(int idRol, List<int> permisosIds)
+    {
+        using var cn = ConexionDB.CrearConexion();
+        cn.Open();
+        using var cmd = new SqlCommand("dbo.usp_RolPermiso_Guardar", cn)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
+        cmd.Parameters.AddWithValue("@IdRol", idRol);
+        cmd.Parameters.AddWithValue("@PermisosIds", permisosIds != null && permisosIds.Count > 0 ? string.Join(",", permisosIds) : "");
+        cmd.ExecuteNonQuery();
     }
 }
