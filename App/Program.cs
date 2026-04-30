@@ -1,4 +1,5 @@
 using CapaNegocios;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace App
 {
@@ -11,11 +12,21 @@ namespace App
             builder.Services.AddScoped<MarcaServicio>();
             builder.Services.AddScoped<CategoriaServicio>();
             builder.Services.AddScoped<EtiquetaServicio>();
-            builder.Services.AddScoped<RolServicio>(); 
+            builder.Services.AddScoped<RolServicio>();
             builder.Services.AddScoped<PermisoServicio>();
             builder.Services.AddScoped<UsuarioServicio>();
+            builder.Services.AddScoped<MensajeContactoServicio>();
 
-            // Add services to the container.
+            builder.Services
+                .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth/Login";
+                    options.AccessDeniedPath = "/Auth/Login";
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(2);
+                    options.SlidingExpiration = true;
+                });
+
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
@@ -31,6 +42,7 @@ namespace App
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapStaticAssets();
